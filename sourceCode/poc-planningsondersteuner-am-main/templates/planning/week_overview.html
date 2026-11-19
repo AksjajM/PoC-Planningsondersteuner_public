@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard / Weekly overview Employee{% endblock %}
+
+{% block content %}
+<div style="padding: 2rem;">
+    <h1 class="page-title">{{ page_title }}</h1>
+    <p class="page-information" role="note">
+        View your standard availability from the current week onward and any recorded employee exceptions. This screen does not show saved weekly planning; use the Dashboard to view saved weekly planning.
+    </p>
+
+    <div style="margin-bottom: 2rem; display: flex; align-items: center; gap: 1rem;">
+        <label for="weekFilter" style="font-weight: bold; width: 60px;">Week</label>
+        <input type="text" id="weekFilter" placeholder="Enter week (e.g. 1)" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 200px;">
+        <span class="tooltip-icon" title="This overview shows standard availability and employee exceptions, not saved weekly planning." style="cursor: pointer; background: #eee; border-radius: 50%; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; margin-left: 10px;">?</span>
+    </div>
+
+    <style>
+        .overview-table th { font-weight: normal; background-color: #e0e0e0; padding: 10px; border: 1px solid #fff; }
+        .overview-table td { background-color: #f9f9f9; padding: 10px; text-align: center; border: 1px solid #fff; }
+        .overview-table .week-col { background-color: #e0e0e0; font-weight: bold; text-align: left; }
+        .overview-table .role-badge { display: inline-block; background: #fff; border: 1px solid #ccc; border-radius: 4px; padding: 2px 8px; min-width: 40px; margin: 0 2px; }
+        .overview-table .empty-badge { visibility: hidden; }
+        .overview-table .exception-indicator { color: #4f46e5; cursor: help; font-size: 0.9rem; }
+    </style>
+
+    <div style="overflow-x: auto; margin-bottom: 2rem;">
+        <table class="overview-table" id="planningTable" style="width: 100%; border-collapse: collapse; text-align: center; font-size: 0.9rem;">
+            <thead>
+                <tr>
+                    <th style="text-align: left; background-color: #6fbbe8; color: black; font-weight: bold;">Planning</th>
+                    <th>Mo</th>
+                    <th>Tue</th>
+                    <th>Wed</th>
+                    <th>Thu</th>
+                    <th>Fri</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for week in weeks_data %}
+                <tr class="week-row" data-week="{{ week.week_number }}">
+                    <td class="week-col">Week {{ week.week_number }}</td>
+                    {% for day in week.days %}
+                    <td>
+                        <div style="font-size: 0.8rem; color: #666; margin-bottom: 4px;">{{ day.date }}</div>
+                        <div style="display: flex; justify-content: center;">
+                            {% if day.morning_role != "-" %}
+                                <span class="role-badge">{{ day.morning_role }}</span>
+                            {% else %}
+                                <span class="role-badge" style="border: 1px dashed #ccc; color: #aaa;">-</span>
+                            {% endif %}
+                            {% if day.morning_exception %}
+                                <span class="exception-indicator" title="Morning exception: {{ day.morning_exception_note }}" aria-label="Morning exception: {{ day.morning_exception_note }}">&#9432;</span>
+                            {% endif %}
+                            
+                            {% if day.afternoon_role != "-" %}
+                                <span class="role-badge">{{ day.afternoon_role }}</span>
+                            {% else %}
+                                <span class="role-badge" style="border: 1px dashed #ccc; color: #aaa;">-</span>
+                            {% endif %}
+                            {% if day.afternoon_exception %}
+                                <span class="exception-indicator" title="Afternoon exception: {{ day.afternoon_exception_note }}" aria-label="Afternoon exception: {{ day.afternoon_exception_note }}">&#9432;</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% comment %}
+    Gereserveerd voor toekomstige functionaliteit (nog niet geïmplementeerd).
+    <div style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+        <button style="background-color: #3b82f6; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Export to CSV</button>
+        <button style="background-color: #3b82f6; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Sync to Outlook</button>
+    </div>
+
+    <div style="font-weight: bold; font-size: 1rem;">
+        Sync status: <span style="color: #10b981;">Success</span>
+    </div>
+    {% endcomment %}
+
+</div>
+
+<script>
+    document.getElementById('weekFilter').addEventListener('input', function() {
+        var filterValue = this.value.trim().toLowerCase();
+        var rows = document.querySelectorAll('#planningTable tbody tr.week-row');
+        
+        rows.forEach(function(row) {
+            var weekNum = row.getAttribute('data-week');
+            if (filterValue === '' || weekNum === filterValue || 'week ' + weekNum === filterValue) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+</script>
+{% endblock %}

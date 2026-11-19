@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Django / local files
+*.log
+*.sqlite3
+media/
+staticfiles/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# VS Code
+.vscode/
+
+# Test / coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# PyLint
+.pylint.d/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test reports
+report.xml
+test-results/
+
+# Code quality reports
+gl-code-quality-report.json
+pylint-report.txt
+.pylint.d/

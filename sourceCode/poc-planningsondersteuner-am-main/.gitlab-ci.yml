@@ -1,0 +1,89 @@
+stages:
+  - prepare
+  - check
+  - test
+  - secret-detection
+  - package
+  - deploy
+
+variables:
+  # Secret Detection
+  SECRET_DETECTION_ENABLED: 'true'
+
+  # VM-Docker deployment
+  VM_DOCKER_HOST_PORT: '8001'
+  VM_DOCKER_INTERNAL_PORT: '8000'
+
+  VM_DOCKER_DOCKER_RUN_FLAGS: >-
+    -e DEBUG=${DJANGO_DEBUG}
+    -e SECRET_KEY=${DJANGO_SECRET_KEY}
+    -e ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS}
+    -e CSRF_TRUSTED_ORIGINS=${DJANGO_CSRF_TRUSTED_ORIGINS}
+    -e APP_PATH_PREFIX=${DJANGO_APP_PATH_PREFIX}
+    -e COOKIE_SECURE=${DJANGO_COOKIE_SECURE}
+
+sast:
+  stage: test
+
+django_tests:
+  stage: test
+  image: python:3.14-slim
+  variables:
+    DEBUG: "True"
+    SECRET_KEY: "ci-only-test-secret"
+    ALLOWED_HOSTS: "localhost,127.0.0.1"
+    CSRF_TRUSTED_ORIGINS: "http://localhost:8000,http://127.0.0.1:8000"
+    DATABASE_PATH: "db.sqlite3"
+  before_script:
+    - python -m pip install --upgrade pip
+    - python -m pip install -r requirements.txt
+    - python -m pip install pytest pytest-django
+  script:
+    - python manage.py check
+    - python manage.py makemigrations --check --dry-run
+    - python -m pytest --ds=config.settings --junitxml=report.xml
+  artifacts:
+    when: always
+    paths:
+      - report.xml
+    reports:
+      junit: report.xml
+    expire_in: 1 week
+
+pylint:
+  stage: check
+  image: python:3.14-slim
+  variables:
+    DEBUG: "True"
+    SECRET_KEY: "ci-only-pylint-secret"
+    ALLOWED_HOSTS: "localhost,127.0.0.1"
+    CSRF_TRUSTED_ORIGINS: "http://localhost:8000,http://127.0.0.1:8000"
+    DATABASE_PATH: "db.sqlite3"
+  before_script:
+    - python -m pip install --upgrade pip
+    - python -m pip install -r requirements-dev.txt
+  script:
+    - python -m pylint --exit-zero --rcfile=.pylintrc --output-format=pylint_gitlab.GitlabCodeClimateReporter config planning > gl-code-quality-report.json
+    - test -s gl-code-quality-report.json || echo "[]" > gl-code-quality-report.json
+    - python -m pylint --rcfile=.pylintrc config planning
+  artifacts:
+    when: always
+    reports:
+      codequality: gl-code-quality-report.json
+    paths:
+      - gl-code-quality-report.json
+    expire_in: 1 week
+
+secret_detection:
+  stage: secret-detection
+
+include:
+  - template: Security/SAST.gitlab-ci.yml
+  - template: Security/Secret-Detection.gitlab-ci.yml
+  - project: 'build/standard-pipelines'
+    file: '/docker-package.gitlab-ci.yml'
+  - project: 'build/standard-pipelines'
+    file: '/deploy/default.gitlab-ci.yml'
+
+deploy_vm_docker:
+  extends: .deploy_vm_docker

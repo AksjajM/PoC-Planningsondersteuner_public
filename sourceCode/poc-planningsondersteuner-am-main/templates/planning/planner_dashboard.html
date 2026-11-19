@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+
+{% block title %}Planner dashboard{% endblock %}
+
+{% block content %}
+<div style="padding: 2rem;">
+    <h1 class="page-title">Planner dashboard</h1>
+    <p class="page-information" role="note">
+        Set the minimum required capacity per role and part of the day, and create the weekly planning. When no planning has been saved for the selected week, standard availability is shown as a starting value. Saving creates or updates the planning for that specific week. Employee exceptions remain visible as information and are not changed.
+    </p>
+
+    {% if messages %}
+    <div id="messages-container" style="margin-bottom: 20px;">
+        {% for message in messages %}
+            <div style="padding: 10px; background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; border-radius: 4px;">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+    <script>
+        setTimeout(function() {
+            var el = document.getElementById('messages-container');
+            if (el) { el.style.display = 'none'; }
+        }, 5000);
+    </script>
+    {% endif %}
+
+    <style>
+        .btn-action {
+            display: inline-block;
+            box-sizing: border-box;
+            min-width: 140px;
+            text-align: center;
+            font-family: inherit;
+            font-size: 1rem;
+            line-height: 1.2;
+            padding: 12px 24px;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .dashboard-grid { width: 100%; border-collapse: separate; border-spacing: 5px; text-align: center; font-size: 0.85rem; margin-bottom: 2rem; }
+        .dashboard-grid th { padding: 8px; font-weight: normal; background-color: #e0e0e0; }
+        .dashboard-grid td { padding: 6px; background-color: #f9f9f9; }
+        .dashboard-grid .row-label { background-color: #e0e0e0; font-weight: bold; text-align: left; padding: 8px; }
+        .dashboard-grid select { width: 100%; padding: 4px; box-sizing: border-box; }
+        .capacity-cell { width: 100%; border: 1px solid #ccc; border-radius: 4px; padding: 6px; background: white; color: #333; text-align: center; }
+        .capacity-cell.capacity-ok { background-color: #61d39b; color: white; }
+        .capacity-cell.capacity-understaffed { background-color: #ff4d4d; color: white; }
+        .capacity-cell.capacity-unset { background-color: #e0e0e0; color: #333; }
+        .capacity-cell option { background-color: white; color: #333; }
+        .on-leave-cell { color: #888; font-style: italic; }
+        .exception-indicator { display: inline-block; margin-top: 4px; color: #4f46e5; cursor: help; font-size: 1rem; }
+    </style>
+
+    <form method="get" style="margin-bottom: 1rem; display: flex; align-items: flex-end; gap: 1rem;">
+        <div>
+            <label for="week-input" style="font-weight: bold; display: block; margin-bottom: 4px;">Week</label>
+            <input type="number" id="week-input" name="week" value="{{ input_week }}" min="1" max="53" onchange="this.form.submit()" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100px;">
+        </div>
+        <div>
+            <label for="year-input" style="font-weight: bold; display: block; margin-bottom: 4px;">Jaar</label>
+            <input type="number" id="year-input" name="year" value="{{ input_year }}" onchange="this.form.submit()" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100px;">
+        </div>
+        <a class="btn-action" href="?year={{ current_year }}&amp;week={{ current_week }}" style="background-color: #6b7280; color: white; text-decoration: none;">Huidige week</a>
+    </form>
+
+    {% if validation_error %}
+        <p style="margin: 0 0 1rem; color: #c0392b; font-weight: bold;">{{ validation_error }}</p>
+    {% endif %}
+
+    <div style="margin-bottom: 2rem;">
+        <label for="role-filter" style="font-weight: bold; display: block; margin-bottom: 4px;">Filter op rol</label>
+        <select id="role-filter" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 220px;">
+            <option value="">Alle rollen</option>
+            {% for role in roles %}
+                <option value="{{ role.id }}">{{ role.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="year" value="{{ input_year }}">
+        <input type="hidden" name="week_number" value="{{ input_week }}">
+
+        <h3 style="font-weight: bold;">Capacity</h3>
+        <div style="overflow-x: auto;">
+            <table class="dashboard-grid">
+                <thead>
+                    <tr>
+                        <th rowspan="2"></th>
+                        {% for date in week_dates %}
+                            <th colspan="2">{{ date|date:"D d/m" }}</th>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        {% for date in week_dates %}
+                            <th>Ochtend</th>
+                            <th>Middag</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for role_overview in capacity_overview %}
+                    <tr>
+                        <td class="row-label">
+                            {{ role_overview.role.name }}
+                        </td>
+                        {% for cell in role_overview.cells %}
+                            <td>
+                                <select
+                                    class="capacity-cell"
+                                    name="capacity_{{ role_overview.role.id }}_{{ cell.day_of_week }}_{{ cell.part_of_day }}"
+                                    data-role-id="{{ role_overview.role.id }}"
+                                    data-day-of-week="{{ cell.day_of_week }}"
+                                    data-part-of-day="{{ cell.part_of_day }}"
+                                    title="Ingepland: {{ cell.scheduled_count }}">
+                                    <option value="">N/A</option>
+                                    {% for option in capacity_options %}
+                                        <option value="{{ option }}" {% if cell.required_fte_option == option|stringformat:"s" %}selected{% endif %}>{{ option }} FTE</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                        {% endfor %}
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="11">Geen actieve rollen.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <h3 style="font-weight: bold;">Planning</h3>
+        <div style="overflow-x: auto;">
+            <table class="dashboard-grid">
+                <thead>
+                    <tr>
+                        <th rowspan="2"></th>
+                        {% for date in week_dates %}
+                            <th colspan="2">{{ date|date:"D d/m" }}</th>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        {% for date in week_dates %}
+                            <th>Ochtend</th>
+                            <th>Middag</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in planning_rows %}
+                    <tr class="planning-row" data-role-ids="{{ row.role_ids|join:',' }}">
+                        <td class="row-label">{{ row.user.username }}</td>
+                        {% for cell in row.cells %}
+                            <td>
+                                {% if cell.on_leave %}
+                                    <span class="on-leave-cell">On leave</span>
+                                {% else %}
+                                    <select class="planning-select" name="planning_{{ row.user.id }}_{{ cell.day_of_week }}_{{ cell.part_of_day }}"
+                                        data-role-id="{{ cell.role.id|default:'' }}"
+                                        data-day-of-week="{{ cell.day_of_week }}"
+                                        data-part-of-day="{{ cell.part_of_day }}">
+                                        <option value="" {% if not cell.role %}selected{% endif %}>N/A</option>
+                                        {% for role in roles %}
+                                            <option value="{{ role.id }}" {% if cell.role.id == role.id %}selected{% endif %}>{{ role.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    {% if cell.availability_exception %}
+                                        <span class="exception-indicator" title="{{ cell.availability_exception_note }}" aria-label="Employee exception: {{ cell.availability_exception_note }}">&#9432;</span>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="11">Geen medewerkers gevonden.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div style="display: flex; justify-content: space-between;">
+            <a class="btn-action" href="{% url 'planning:export_weekly_planning_csv' %}?year={{ year }}&amp;week={{ week_number }}" style="background-color: #3b82f6; color: white; text-decoration: none;">Export to CSV</a>
+            <button type="submit" class="btn-action" style="background-color: {% if validation_error %}#9ca3af{% else %}#61d39b{% endif %}; color: white;{% if validation_error %} cursor: not-allowed; opacity: 0.8;{% endif %}" {% if validation_error %}disabled title="Corrigeer eerst het jaar of de week."{% endif %}>Save</button>
+        </div>
+    </form>
+</div>
+<script>
+    (function () {
+        const capacityCells = document.querySelectorAll('.capacity-cell');
+        const planningSelects = document.querySelectorAll('.planning-select');
+        const roleFilter = document.getElementById('role-filter');
+
+        function refreshCapacityColors() {
+            capacityCells.forEach(function (cell) {
+                const required = parseFloat(cell.value);
+                const roleId = cell.dataset.roleId;
+                const day = cell.dataset.dayOfWeek;
+                const part = cell.dataset.partOfDay;
+                let scheduled = 0;
+                planningSelects.forEach(function (select) {
+                    if (select.value === roleId && select.dataset.dayOfWeek === day &&
+                        select.dataset.partOfDay === part) {
+                        scheduled += 1;
+                    }
+                });
+                cell.classList.remove('capacity-ok', 'capacity-understaffed', 'capacity-unset');
+                if (Number.isNaN(required)) {
+                    cell.classList.add('capacity-unset');
+                } else if (scheduled < required) {
+                    cell.classList.add('capacity-understaffed');
+                } else {
+                    cell.classList.add('capacity-ok');
+                }
+                cell.title = 'Ingepland: ' + scheduled;
+            });
+        }
+
+        function refreshRoleFilter() {
+            const selectedRole = roleFilter.value;
+            document.querySelectorAll('.planning-row').forEach(function (row) {
+                const roleIds = row.dataset.roleIds ? row.dataset.roleIds.split(',') : [];
+                row.hidden = Boolean(selectedRole) && !roleIds.includes(selectedRole);
+            });
+        }
+
+        planningSelects.forEach(function (select) {
+            select.addEventListener('change', refreshCapacityColors);
+        });
+        capacityCells.forEach(function (cell) {
+            cell.addEventListener('change', refreshCapacityColors);
+        });
+        roleFilter.addEventListener('change', refreshRoleFilter);
+        refreshCapacityColors();
+    }());
+</script>
+{% endblock %}

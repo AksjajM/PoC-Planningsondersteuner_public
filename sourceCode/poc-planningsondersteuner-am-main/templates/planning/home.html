@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div style="padding: 2rem;">
+    <h1 class="page-title">Dashboard</h1>
+
+    <h2 style="font-size: 1.3rem; font-weight: normal;">Saved weekly planning</h2>
+    <p class="page-information" role="note">
+        This overview shows only the saved weekly planning for all employees in the selected week.
+        It does not show standard availability, availability exceptions, leave requests or capacity requirements.
+        N/A means that no planning has been saved for that time slot.
+    </p>
+
+    <div style="display: flex; gap: 1rem; margin: 1.5rem 0;">
+        <a href="?year={{ current_year }}&amp;week={{ current_week }}" style="padding: 10px 18px; color: white; background: #6b7280; border-radius: 4px; text-decoration: none;">Current week</a>
+        <a href="?year={{ next_year }}&amp;week={{ next_week }}" style="padding: 10px 18px; color: white; background: #6b7280; border-radius: 4px; text-decoration: none;">Next week</a>
+    </div>
+
+    {% if validation_error %}
+        <p style="color: #c0392b; font-weight: bold;">{{ validation_error }}</p>
+    {% endif %}
+
+    <h3 style="font-size: 1.1rem;">Week {{ week_number }}, {{ year }}</h3>
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: separate; border-spacing: 5px; text-align: center; font-size: 0.9rem;">
+            <thead>
+                <tr>
+                    <th rowspan="2" style="padding: 8px; background: #e0e0e0;"></th>
+                    {% for date in week_dates %}
+                        <th colspan="2" style="padding: 8px; background: #e0e0e0;">{{ date|date:"D d/m" }}</th>
+                    {% endfor %}
+                </tr>
+                <tr>
+                    {% for date in week_dates %}
+                        <th style="padding: 8px; background: #e0e0e0;">Morning</th>
+                        <th style="padding: 8px; background: #e0e0e0;">Afternoon</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in planning_rows %}
+                    <tr>
+                        <td style="padding: 8px; background: #e0e0e0; font-weight: bold; text-align: left;">{{ row.user.username }}</td>
+                        {% for cell in row.cells %}
+                            <td style="padding: 8px; background: #f9f9f9;">{{ cell.role.name|default:"N/A" }}</td>
+                        {% endfor %}
+                    </tr>
+                {% empty %}
+                    <tr><td colspan="11">No employees found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

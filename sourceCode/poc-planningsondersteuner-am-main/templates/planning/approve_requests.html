@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}Approve requests{% endblock %}
+
+{% block content %}
+<div style="padding: 2rem;">
+    <h1 class="page-title">Approve requests</h1>
+    <p class="page-information" role="note">
+        Review pending and approved vacation requests. An overlap means that another pending or approved request covers at least one day in the same period. Declined requests are shown separately and are not included in conflict information.
+    </p>
+
+    {% if messages %}
+    <div id="messages-container" style="margin-bottom: 20px;">
+        {% for message in messages %}
+            <div style="padding: 10px; background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; border-radius: 4px;">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+    <script>
+        setTimeout(function() {
+            var el = document.getElementById('messages-container');
+            if (el) {
+                el.style.display = 'none';
+            }
+        }, 5000);
+    </script>
+    {% endif %}
+
+    <style>
+        .btn-action {
+            display: inline-block;
+            box-sizing: border-box;
+            min-width: 140px;
+            text-align: center;
+            font-family: inherit;
+            font-size: 1rem;
+            line-height: 1.2;
+            padding: 12px 24px;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .request-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem; margin-bottom: 2rem; }
+        .request-table th { background-color: #6fbbe8; color: black; padding: 10px; font-weight: bold; }
+        .request-table td { background-color: #f9f9f9; padding: 10px; border-bottom: 1px solid #fff; }
+        .request-table .empty-row td { text-align: center; color: #888; font-style: italic; }
+        .filter-select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; background-color: white; min-width: 180px; }
+    </style>
+
+    <form method="get" style="margin-bottom: 2rem;">
+        <div style="display: flex; gap: 2rem; align-items: flex-end;">
+            <div>
+                <label for="user-filter" style="font-weight: bold; display: block; margin-bottom: 4px;">User</label>
+                <select id="user-filter" name="user" class="filter-select" onchange="this.form.submit()">
+                    <option value="">All</option>
+                    {% for request_user in users %}
+                        <option value="{{ request_user.id }}" {% if selected_user == request_user.id|stringformat:"s" %}selected{% endif %}>{{ request_user.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </form>
+
+    {% if conflict_count %}
+        <div style="padding: 10px; margin-bottom: 1rem; background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; border-radius: 4px;">
+            {{ conflict_count }} aanvraag/aanvragen hebben overlap met een andere actieve aanvraag.
+        </div>
+    {% endif %}
+
+    <div style="padding: 10px; margin-bottom: 1.5rem; background-color: #eef6fb; color: #245269; border: 1px solid #b8d9ea; border-radius: 4px;">
+        <strong>Wanneer is er sprake van overlap?</strong><br>
+        Er is sprake van overlap wanneer de aangevraagde periode geheel of gedeeltelijk samenvalt met de vakantieperiode van een andere actieve aanvraag.
+        Alleen aanvragen met de status <strong>In behandeling</strong> of <strong>Goedgekeurd</strong> tellen mee. Afgewezen aanvragen worden niet meegerekend.
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        {% for title, group_requests, show_conflicts in request_groups %}
+            <h3 style="font-weight: normal;">{{ title }}</h3>
+            <table class="request-table">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>User</th>
+                        <th>Start date</th>
+                        <th>End date</th>
+                        <th>Note</th>
+                        {% if show_conflicts %}<th>Conflict</th>{% endif %}
+                        <th>Created on</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for vacation_request in group_requests %}
+                    <tr>
+                        <td>{% if show_conflicts %}<input type="checkbox" name="selected_requests" value="{{ vacation_request.id }}">{% endif %}</td>
+                        <td>{{ vacation_request.user.username }}</td>
+                        <td>{{ vacation_request.start_date }}</td>
+                        <td>{{ vacation_request.end_date }}</td>
+                        <td>{{ vacation_request.note }}</td>
+                        {% if show_conflicts %}
+                            <td>
+                                {% if vacation_request.conflict_summary.has_conflict %}
+                                    Goedgekeurd: {{ vacation_request.conflict_summary.approved_count }};
+                                    In behandeling: {{ vacation_request.conflict_summary.pending_count }}
+                                {% else %}
+                                    Geen overlap
+                                {% endif %}
+                            </td>
+                        {% endif %}
+                        <td>{{ vacation_request.created_on }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr class="empty-row"><td colspan="{% if show_conflicts %}7{% else %}6{% endif %}">Geen aanvragen.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endfor %}
+
+        <div style="display: flex; justify-content: space-between; max-width: 400px;">
+            <button type="submit" name="action" value="decline" class="btn-action" style="background-color: #ff4d4d; color: white;">Decline</button>
+            <button type="submit" name="action" value="approve" class="btn-action" style="background-color: #61d39b; color: white;">Approve</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

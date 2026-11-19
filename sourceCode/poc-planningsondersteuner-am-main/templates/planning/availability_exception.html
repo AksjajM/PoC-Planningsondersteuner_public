@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}Employee exceptions{% endblock %}
+
+{% block content %}
+<div style="padding: 2rem;">
+    <h1 class="page-title">Employee exceptions</h1>
+    <p class="page-information" role="note">
+        Record a temporary change to your availability for a selected week and part of the day. Select the role that differs from your usual availability and enter a reason. This does not change your standard availability.
+    </p>
+
+    {% if messages %}
+        <div id="messages-container" style="margin-bottom: 1rem;">
+            {% for message in messages %}
+                <div style="padding: 10px; background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; border-radius: 4px;">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <style>
+        .exception-button { display: inline-block; box-sizing: border-box; min-width: 140px; padding: 10px 20px; border: 0; border-radius: 4px; color: white; text-align: center; text-decoration: none; font: inherit; font-weight: bold; }
+        .exception-grid { width: 100%; border-collapse: separate; border-spacing: 5px; text-align: center; margin-bottom: 1.5rem; }
+        .exception-grid th { padding: 10px 6px; background: #e0e0e0; font-weight: normal; }
+        .exception-grid td { padding: 6px; background: #f9f9f9; }
+        .exception-grid .user-cell { min-width: 150px; background: #e0e0e0; font-weight: bold; text-align: left; }
+        .exception-grid select { width: 100%; min-width: 95px; padding: 7px; border: 1px solid #ccc; border-radius: 4px; background: white; }
+        .exception-indicator { display: inline-block; margin-top: 4px; color: #4f46e5; cursor: help; font-size: 1rem; }
+        .field-error { margin: 5px 0 0; color: #c0392b; font-weight: bold; }
+        .note-wrapper { display: flex; max-width: 620px; margin-top: 8px; }
+        .note-prefix { padding: 10px; border: 1px solid #ccc; border-right: 0; border-radius: 4px 0 0 4px; background: #f1f1f1; white-space: nowrap; }
+        .note-input { flex: 1; min-width: 180px; padding: 10px; border: 1px solid #ccc; border-radius: 0 4px 4px 0; }
+    </style>
+
+    <form method="get" style="display: flex; align-items: flex-end; gap: 1rem; margin-bottom: 1rem;">
+        <div>
+            <label for="week-input" style="display: block; margin-bottom: 4px; font-weight: bold;">Week</label>
+            <input type="number" id="week-input" name="week" value="{{ input_week }}" min="1" max="53" onchange="this.form.submit()" style="width: 100px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+        </div>
+        <div>
+            <label for="year-input" style="display: block; margin-bottom: 4px; font-weight: bold;">Year</label>
+            <input type="number" id="year-input" name="year" value="{{ input_year }}" min="2020" max="2040" onchange="this.form.submit()" style="width: 100px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+        </div>
+        <a class="exception-button" href="?year={{ current_year }}&amp;week={{ current_week }}" style="background: #6b7280;">Current week</a>
+    </form>
+
+    {% if validation_error %}
+        <p class="field-error">{{ validation_error }}</p>
+    {% endif %}
+
+    <form method="post" id="exception-form">
+        {% csrf_token %}
+        <input type="hidden" name="year" value="{{ input_year }}">
+        <input type="hidden" name="week_number" value="{{ input_week }}">
+
+        <div style="overflow-x: auto;">
+            <table class="exception-grid">
+                <thead>
+                    <tr>
+                        <th rowspan="2"></th>
+                        {% for date in week_dates %}
+                            <th colspan="2">{{ date|date:"l d-m-Y" }}</th>
+                        {% endfor %}
+                    </tr>
+                    <tr>
+                        {% for date in week_dates %}
+                            <th>Morning</th>
+                            <th>Afternoon</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="user-cell">{{ request.user.username }}</td>
+                        {% for cell in cells %}
+                            <td>
+                                <select class="exception-select" name="exception_{{ cell.day_of_week }}_{{ cell.part_of_day }}" data-initial-value="{{ cell.initial_role_id|default:'' }}">
+                                    <option value="" {% if not cell.role_id %}selected{% endif %}>N/A</option>
+                                    {% for role in roles %}
+                                        <option value="{{ role.id }}" {% if cell.role_id|stringformat:"s" == role.id|stringformat:"s" %}selected{% endif %}>{{ role.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                {% if cell.exception %}
+                                    <span class="exception-indicator" title="{{ cell.exception_note }}" aria-label="Employee exception: {{ cell.exception_note }}">&#9432;</span>
+                                {% endif %}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <label for="note-input" style="display: block; font-weight: bold;">Required reason</label>
+        <div class="note-wrapper">
+            <span class="note-prefix">Availability exception ingevoerd door medewerker:</span>
+            <input class="note-input" id="note-input" name="note" maxlength="231" value="{{ form.note.value|default:'' }}" aria-describedby="note-error" required>
+        </div>
+        <p id="note-error" class="field-error" {% if not form.note.errors %}hidden{% endif %}>
+            {% if form.note.errors %}{{ form.note.errors.0 }}{% else %}Enter a reason before saving.{% endif %}
+        </p>
+        {% for error in form.non_field_errors %}
+            <p class="field-error">{{ error }}</p>
+        {% endfor %}
+
+        <div style="display: flex; justify-content: flex-end; margin-top: 2rem;">
+            <button type="submit" id="save-button" class="exception-button" disabled style="background: #9ca3af; cursor: not-allowed; opacity: 0.8;">Save</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    (function () {
+        const form = document.getElementById('exception-form');
+        const selects = Array.from(document.querySelectorAll('.exception-select'));
+        const note = document.getElementById('note-input');
+        const noteError = document.getElementById('note-error');
+        const saveButton = document.getElementById('save-button');
+        const invalidPeriod = {{ validation_error|yesno:"true,false" }};
+
+        function refreshFormState() {
+            const changed = selects.some(function (select) {
+                return select.value !== select.dataset.initialValue;
+            });
+            const hasNote = note.value.trim().length > 0;
+            const canSave = changed && hasNote && !invalidPeriod;
+
+            saveButton.disabled = !canSave;
+            saveButton.style.background = canSave ? '#61d39b' : '#9ca3af';
+            saveButton.style.cursor = canSave ? 'pointer' : 'not-allowed';
+            saveButton.style.opacity = canSave ? '1' : '0.8';
+            noteError.hidden = hasNote || !changed;
+        }
+
+        selects.forEach(function (select) {
+            select.addEventListener('change', refreshFormState);
+        });
+        note.addEventListener('input', refreshFormState);
+        form.addEventListener('submit', function (event) {
+            if (saveButton.disabled) {
+                event.preventDefault();
+            }
+        });
+        refreshFormState();
+    }());
+</script>
+{% endblock %}

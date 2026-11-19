@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Standard availability{% endblock %}
+
+{% block content %}
+<div style="padding: 2rem;">
+    <h1 class="page-title">Standard availability</h1>
+    <p class="page-information" role="note">
+        Set your usual availability for each weekday and part of the day. These roles are used immediately as a default when no saved planner schedule exists for that week. A saved weekly planning overrides your standard availability for that specific week.
+    </p>
+
+    {% if messages %}
+    <div id="messages-container" style="margin-bottom: 20px;">
+        {% for message in messages %}
+            <div style="padding: 10px; background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; border-radius: 4px;">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+    <script>
+        setTimeout(function() {
+            var el = document.getElementById('messages-container');
+            if (el) {
+                el.style.display = 'none';
+            }
+        }, 5000);
+    </script>
+    {% endif %}
+
+    <form method="post" action="{% url 'planning:availability' %}">
+        {% csrf_token %}
+        <div style="margin-bottom: 2rem;">
+            <select id="mode-select" name="status" style="padding: 8px; width: 200px; border: 1px solid #ccc; border-radius: 4px; background-color: white;">
+                <option value="current">Current</option>
+                <option value="new">New</option>
+            </select>
+        </div>
+
+        <style>
+            .availability-grid select { width: 100%; padding: 5px; }
+            .btn-action {
+                display: inline-block;
+                box-sizing: border-box;
+                min-width: 140px;
+                text-align: center;
+                font-family: inherit;
+                font-size: 1rem;
+                line-height: 1.2;
+                padding: 12px 24px;
+                border: none;
+                cursor: pointer;
+                border-radius: 4px;
+                font-weight: bold;
+            }
+            #save-btn { transition: box-shadow 0.15s ease-in-out; }
+            #save-btn.has-changes { box-shadow: 0 0 0 3px rgba(97, 211, 155, 0.55); }
+        </style>
+
+        <table class="availability-grid" style="width: 100%; border-collapse: separate; border-spacing: 5px 15px; text-align: center; font-size: 0.9rem;">
+            <thead>
+                <tr style="background-color: #f0f0f0;">
+                    <th style="padding: 10px; border: none;" rowspan="2"></th>
+                    <th colspan="2" style="padding: 8px; font-weight: bold; background-color: #d8d8d8;">Monday</th>
+                    <th colspan="2" style="padding: 8px; font-weight: bold; background-color: #d8d8d8;">Tuesday</th>
+                    <th colspan="2" style="padding: 8px; font-weight: bold; background-color: #d8d8d8;">Wednesday</th>
+                    <th colspan="2" style="padding: 8px; font-weight: bold; background-color: #d8d8d8;">Thursday</th>
+                    <th colspan="2" style="padding: 8px; font-weight: bold; background-color: #d8d8d8;">Friday</th>
+                </tr>
+                <tr style="background-color: #f0f0f0;">
+                    <th style="padding: 10px; font-weight: normal; background-color: #e0e0e0;">Morning<br><span style="font-weight: normal; font-size: 0.75rem; color: #555;">9:00&ndash;12:00</span></th>
+                    <th style="padding: 10px; font-weight: normal; background-color: #e0e0e0;">Afternoon<br><span style="font-weight: normal; font-size: 0.75rem; color: #555;">12:00&ndash;17:00</span></th>
+                    <th style="padding: 10px; font-weight: normal; background-color: #e0e0e0;">Morning<br><span style="font-weight: normal; font-size: 0.75rem; color: #555;">9:00&ndash;12:00</span></th>
+                    <th style="padding: 10px; font-weight: normal; background-color: #e0e0e0;">Afternoon<br><span style="font-weight: normal; font-size: 0.75rem; color: #555;">12:00&ndash;17:00</span></th>
+                    <th style="padding: 10px; font-weight: normal; background-color: #e0e0e0;">Morning<br><span style="font-weight: normal; font-size: 0.75rem; color: #555;">9:00&ndash;12:00</span></th>
+                    <th style="padding: 10px; font-weight: normal; background-color: #e0e0e0;">Afternoon<br><span style="font-weight: normal; font-size: 0.75rem; color: #555;">12:00&ndash;17:00</span></th>
+                    <th style="padding: 10px; font-weight: normal; background-color: #e0e0e0;">Morning<br><span style="font-weight: normal; font-size: 0.75rem; color: #555;">9:00&ndash;12:00</span></th>
+                    <th style="padding: 10px; font-weight: normal; background-color: #e0e0e0;">Afternoon<br><span style="font-weight: normal; font-size: 0.75rem; color: #555;">12:00&ndash;17:00</span></th>
+                    <th style="padding: 10px; font-weight: normal; background-color: #e0e0e0;">Morning<br><span style="font-weight: normal; font-size: 0.75rem; color: #555;">9:00&ndash;12:00</span></th>
+                    <th style="padding: 10px; font-weight: normal; background-color: #e0e0e0;">Afternoon<br><span style="font-weight: normal; font-size: 0.75rem; color: #555;">12:00&ndash;17:00</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="background-color: #e0e0e0; padding: 10px; text-align: left;">{{ request.user.username }}</td>
+                    <td>{{ form.1_MORNING }}</td>
+                    <td>{{ form.1_AFTERNOON }}</td>
+                    <td>{{ form.2_MORNING }}</td>
+                    <td>{{ form.2_AFTERNOON }}</td>
+                    <td>{{ form.3_MORNING }}</td>
+                    <td>{{ form.3_AFTERNOON }}</td>
+                    <td>{{ form.4_MORNING }}</td>
+                    <td>{{ form.4_AFTERNOON }}</td>
+                    <td>{{ form.5_MORNING }}</td>
+                    <td>{{ form.5_AFTERNOON }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div style="display: flex; justify-content: space-between; margin-top: 3rem;">
+            <a href="{% url 'planning:availability' %}" class="btn-action" style="background-color: #ff4d4d; color: white; text-decoration: none;">Cancel</a>
+            <button type="submit" id="save-btn" class="btn-action" style="background-color: #61d39b; color: white;">Save</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    (function () {
+        var modeSelect = document.getElementById('mode-select');
+        var saveBtn = document.getElementById('save-btn');
+        var gridSelects = document.querySelectorAll('.availability-grid select');
+
+        // PLON-25 review: bewaar de door de server gerenderde ("Current") waarden
+        // bij het laden van de pagina, zodat we bij het terugswitchen naar "Current"
+        // deze waarden kunnen herstellen zonder een volledige page reload.
+        // Bewuste keuze voor de PoC: als de beschikbaarheid intussen in een andere
+        // browsertab is opgeslagen, wordt die wijziging hier niet automatisch opgehaald
+        // (dat zou een asynchrone (AJAX) implementatie vereisen).
+        var savedValues = {};
+        gridSelects.forEach(function (select) {
+            savedValues[select.name] = select.value;
+        });
+
+        function markChanged() {
+            if (saveBtn) {
+                saveBtn.classList.add('has-changes');
+            }
+        }
+
+        gridSelects.forEach(function (select) {
+            select.addEventListener('change', markChanged);
+        });
+
+        modeSelect.addEventListener('change', function () {
+            if (this.value === 'new') {
+                gridSelects.forEach(function (select) {
+                    select.value = '';
+                });
+                markChanged();
+            } else {
+                gridSelects.forEach(function (select) {
+                    select.value = savedValues[select.name];
+                });
+                if (saveBtn) {
+                    saveBtn.classList.remove('has-changes');
+                }
+            }
+        });
+    })();
+</script>
+{% endblock %}
+

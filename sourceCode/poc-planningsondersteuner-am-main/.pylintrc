@@ -1,0 +1,12 @@
+[MAIN]
+load-plugins=pylint_django
+django-settings-module=config.settings
+ignore=migrations,.venv
+jobs=0
+
+[MESSAGES CONTROL]
+disable=all
+enable=E,F
+
+[FORMAT]
+max-line-length=100

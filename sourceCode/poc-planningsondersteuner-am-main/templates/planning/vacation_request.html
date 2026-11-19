@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}Vacation request{% endblock %}
+
+{% block content %}
+<div style="padding: 2rem;">
+    <h1 class="page-title">Vacation request</h1>
+    <p class="page-information" role="note">
+        Submit a vacation request for a period. The request remains pending until a planner approves or declines it. Overlap information is an indication only and does not prevent you from submitting a request.
+    </p>
+
+    {% if messages %}
+    <div id="messages-container" style="margin-bottom: 20px;">
+        {% for message in messages %}
+            <div style="padding: 10px; background-color: {% if message.tags == 'warning' %}#fff3cd; color: #856404; border: 1px solid #ffeeba;{% else %}#d4edda; color: #155724; border: 1px solid #c3e6cb;{% endif %} border-radius: 4px;">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+    <script>
+        setTimeout(function() {
+            var el = document.getElementById('messages-container');
+            if (el) {
+                el.style.display = 'none';
+            }
+        }, 5000);
+    </script>
+    {% endif %}
+
+    <style>
+        .btn-action {
+            display: inline-block;
+            box-sizing: border-box;
+            min-width: 140px;
+            text-align: center;
+            font-family: inherit;
+            font-size: 1rem;
+            line-height: 1.2;
+            padding: 12px 24px;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .request-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem; margin-bottom: 2rem; }
+        .request-table th { background-color: #6fbbe8; color: black; padding: 10px; font-weight: bold; }
+        .request-table td { background-color: #f9f9f9; padding: 10px; border-bottom: 1px solid #fff; }
+        .request-table .empty-row td { text-align: center; color: #888; font-style: italic; }
+        .field-error { color: #c0392b; font-size: 0.85rem; margin-top: 4px; }
+    </style>
+
+    <form method="post" action="{% url 'planning:vacation_request' %}">
+        {% csrf_token %}
+
+        {% if form.non_field_errors %}
+            <div class="field-error" style="margin-bottom: 1rem;">{{ form.non_field_errors }}</div>
+        {% endif %}
+
+        <div style="display: flex; align-items: flex-start; gap: 2rem; margin-bottom: 2rem;">
+            <div>
+                <label for="{{ form.start_date.id_for_label }}" style="font-weight: bold; display: block; margin-bottom: 4px;">From</label>
+                {{ form.start_date }}
+                {% if form.start_date.errors %}<div class="field-error">{{ form.start_date.errors }}</div>{% endif %}
+            </div>
+            <div>
+                <label for="{{ form.end_date.id_for_label }}" style="font-weight: bold; display: block; margin-bottom: 4px;">To</label>
+                {{ form.end_date }}
+                {% if form.end_date.errors %}<div class="field-error">{{ form.end_date.errors }}</div>{% endif %}
+            </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; margin-bottom: 3rem; max-width: 400px;">
+            <button type="submit" class="btn-action" style="background-color: #61d39b; color: white;">Save &amp; request</button>
+        </div>
+    </form>
+
+    <h3 style="font-weight: normal;">Pending requests</h3>
+    <table class="request-table">
+        <thead>
+            <tr>
+                <th>From</th>
+                <th>To</th>
+                <th>Status</th>
+                <th>Note</th>
+                <th>Created on</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for vacation_request in pending_requests %}
+            <tr>
+                <td>{{ vacation_request.start_date }}</td>
+                <td>{{ vacation_request.end_date }}</td>
+                <td>{{ vacation_request.get_planning_status_display }}</td>
+                <td>{{ vacation_request.note }}</td>
+                <td>{{ vacation_request.created_on }}</td>
+            </tr>
+            {% empty %}
+            <tr class="empty-row"><td colspan="5">No pending requests.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h3 style="font-weight: normal;">Approved requests</h3>
+    <table class="request-table">
+        <thead>
+            <tr>
+                <th>From</th>
+                <th>To</th>
+                <th>Status</th>
+                <th>Note</th>
+                <th>Created on</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for vacation_request in approved_requests %}
+            <tr>
+                <td>{{ vacation_request.start_date }}</td>
+                <td>{{ vacation_request.end_date }}</td>
+                <td>{{ vacation_request.get_planning_status_display }}</td>
+                <td>{{ vacation_request.note }}</td>
+                <td>{{ vacation_request.created_on }}</td>
+            </tr>
+            {% empty %}
+            <tr class="empty-row"><td colspan="5">No approved requests.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <h3 style="font-weight: normal;">Declined requests</h3>
+    <table class="request-table">
+        <thead>
+            <tr>
+                <th>From</th>
+                <th>To</th>
+                <th>Status</th>
+                <th>Note</th>
+                <th>Created on</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for vacation_request in declined_requests %}
+            <tr>
+                <td>{{ vacation_request.start_date }}</td>
+                <td>{{ vacation_request.end_date }}</td>
+                <td>{{ vacation_request.get_planning_status_display }}</td>
+                <td>{{ vacation_request.note }}</td>
+                <td>{{ vacation_request.created_on }}</td>
+            </tr>
+            {% empty %}
+            <tr class="empty-row"><td colspan="5">No declined requests.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
